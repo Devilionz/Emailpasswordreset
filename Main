@@ -70,7 +70,6 @@ $SmtpServer = "smtp.office365.com"
 $Port = 587
 
 ForEach ($email in $_.EmailAddress) { 
-#send-mailmessage -to $email -from reporting@eurodebt.com -bcc adam.hale@eurodebt.com -Subject "Password Reminder: Your password will expire in $DaysLeft days" -body $WarnMsg  -smtpserver ed-bed10 -BodyAsHtml }
 Send-MailMessage -From $From -To $bcc -Subject $Subject -SmtpServer $SmtpServer -Credential $mycreds -Port $Port -BodyAsHtml -UseSsl -Body $body3
     	}
  
