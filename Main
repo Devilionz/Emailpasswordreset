@@ -1,0 +1,79 @@
+import-module ActiveDirectory;
+
+$maxPasswordAgeTimeSpan = (Get-ADDefaultDomainPasswordPolicy).MaxPasswordAge
+ 
+Get-ADUser -filter * -properties PasswordLastSet, PasswordExpired, PasswordNeverExpires, EmailAddress, GivenName -SearchBase "DC=office,DC=rightmove,DC=co,DC=uk" |
+? {$_.DistinguishedName -notmatch 'OU=Non User Accounts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Service Accounts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Meeting Rooms,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=APPV,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Archive,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Builtin,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Citrix 2012 Test,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Contacts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Contractor Login Accounts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Disabled Users,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Distribution Group,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Unix Systems,OU=London,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'CN=ForeignSecurityPrincipals,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Microsoft Exchange Security Groups,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Test,OU=Milton Keynes,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Non User Accounts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Reactive,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Shared E-mail Accounts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=SharepointLists,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Supplier Accounts,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=User Templates,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'CN=Users,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Outside View,DC=office,DC=rightmove,DC=co,DC=uk' `
+-and $_.DistinguishedName -notmatch 'OU=Maternity leave,DC=office,DC=rightmove,DC=co,DC=uk' } |
+foreach {
+ 
+    $today=get-date
+    $UserName=$_.GivenName
+    $Email=$_.EmailAddress
+ 
+    if (!$_.PasswordExpired -and !$_.PasswordNeverExpires) {
+ 
+        $ExpiryDate=$_.PasswordLastSet + $maxPasswordAgeTimeSpan
+        $DaysLeft=($ExpiryDate-$today).days
+ 
+        if ($DaysLeft -lt 7 -and $DaysLeft -gt 0){
+ 
+$body3 = "
+<p style='font-family:calibri'>Hi $UserName,</p>
+<p style='font-family:calibri'>Your Windows login password will expire in $DaysLeft days, please press CTRL-ALT-DEL and change your password.  As a reminder, you will have to enter your new password into your DOMAIN connected mobile device if prompted.</p>
+
+<p style='font-family:calibri'>Requirements for the password are as follows:</p>
+<ul style='font-family:calibri'>
+<li>Must not contain the user's account name or parts of the user's full name that exceed two consecutive characters</li>
+<li>Must not be one of your last 7 passwords</li>
+<li>Contain characters from the following four categories:</li>
+<li>English uppercase characters (A through Z)</li>
+<li>English lowercase characters (a through z)</li>
+<li>Base 10 digits (0 through 9)</li>
+<li>Non-alphabetic characters (for example, !, $, #, %)</li>
+</ul>
+ 
+"
+
+#Register the Creds
+$secpasswd = ConvertTo-SecureString “*********” -AsPlainText -Force
+$mycreds = New-Object System.Management.Automation.PSCredential (“emailrep@rightmove.co.uk”, $secpasswd)
+
+#Send the email
+$From = "reporting@rightmove.co.uk"
+$To = $Email
+$bcc = "adam.hale@rightove.co.uk"
+$Subject = "Password Reminder: Your password will expire in $DaysLeft days"
+$SmtpServer = "smtp.office365.com"
+$Port = 587
+
+ForEach ($email in $_.EmailAddress) { 
+#send-mailmessage -to $email -from reporting@eurodebt.com -bcc adam.hale@eurodebt.com -Subject "Password Reminder: Your password will expire in $DaysLeft days" -body $WarnMsg  -smtpserver ed-bed10 -BodyAsHtml }
+Send-MailMessage -From $From -To $bcc -Subject $Subject -SmtpServer $SmtpServer -Credential $mycreds -Port $Port -BodyAsHtml -UseSsl -Body $body3
+    	}
+ 
+    }
+}
+}
